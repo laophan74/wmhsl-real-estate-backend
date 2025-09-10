@@ -4,6 +4,8 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
+    "seed-sample": "node scripts/seed-sample.js",
+    "dump-db": "node scripts/dump-db.js",
     "dev": "nodemon --watch src --ext js,json --exec node src/index.js",
     "start": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -22,6 +24,8 @@
     "zod": "^4.1.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "celebrate": "^15.0.3",
+    "joi": "^17.13.3"
   }
 }

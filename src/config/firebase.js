@@ -21,12 +21,10 @@ let initialized = false;
 export function initFirebase() {
   if (initialized) return admin;
 
-  // Ưu tiên 3 biến môi trường nếu có (dùng khi deploy)
   const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL } = process.env;
   let { FIREBASE_PRIVATE_KEY } = process.env;
 
   if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
-    // .env phải dùng \n thay cho xuống dòng thật
     FIREBASE_PRIVATE_KEY = FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
 
     admin.initializeApp({
@@ -37,7 +35,6 @@ export function initFirebase() {
       }),
     });
   } else {
-    // Local: đọc từ file JSON (ổn định, tránh lỗi import assert)
     const serviceAccount = readServiceAccountFromFile();
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
