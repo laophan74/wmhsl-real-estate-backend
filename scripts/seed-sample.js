@@ -105,74 +105,17 @@ async function run() {
       last_name: "Pham",
       email: "taylor.pham@example.com",
       phone: "0466789123",
-      preferred_contact: "both"
-    },
-    property: {
-      property_id: propertiesRef,
-      address: "123 Pacific Highway",
+      preferred_contact: "both",
       suburb: "Asquith",
-      postcode: "2077",
-      state: "NSW",
-      type: "house",
-      features: {
-        bedrooms: 3,
-        bathrooms: 2,
-        car_spaces: 1,
-        land_size: 600
-      }
-    },
-    intent: {
       timeframe: "1-3 months",
-      reason: "upsizing",
-      price_expectation: 1450000,
-      motivation_level: "high",
-      additional_notes: "Wants quick appraisal and weekend viewing."
-    },
-    scoring: {
-      total_score: 82,
-      category: "HOT",
-      factors: {
-        timeframe_score: 35,
-        value_score: 25,
-        engagement_score: 18,
-        quality_score: 4
-      },
-      scored_at: ts(),
-      score_version: "v1.0.0"
-    },
-    tracking: {
-      source: "facebook",
-      campaign_id: "FB-CAMP-001",
-      ad_id: "AD-12345",
-      utm_source: "facebook",
-      utm_medium: "cpc",
-      utm_campaign: "asquith-sept",
-      ip_address: "hash:6d1b3b...e9",
-      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-      referrer: "https://www.facebook.com/ads"
-    },
-    assignment: {
-      assigned_to: agentsRef,
-      assigned_at: ts(),
-      assignment_method: "automatic",
-      previous_assignments: []
+      score: 82
     },
     status: {
       current: "contacted",
-      substatus: "awaiting-docs",
       history: [
         { status: "new", changed_at: ts(), changed_by: agentId, notes: "Lead created from FB form" },
         { status: "contacted", changed_at: ts(), changed_by: agentId, notes: "Called and sent intro email" }
       ]
-    },
-    engagement: {
-      last_contacted: ts(),
-      contact_count: 2,
-      last_activity: ts(),
-      response_time: 30,
-      emails_sent: 1,
-      emails_opened: 1,
-      links_clicked: 1
     },
     metadata: {
       created_at: ts(),

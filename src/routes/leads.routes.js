@@ -2,6 +2,7 @@ import { Router } from "express";
 import { celebrate, Segments, Joi } from "celebrate";
 import * as LeadsCtrl from "../controllers/leads.controller.js";
 import { asyncHandler } from "../middleware/async-handler.js";
+import leadValidators from "../validators/lead.schema.js";
 
 const r = Router();
 
@@ -10,22 +11,7 @@ const r = Router();
  */
 r.post(
   "/public",
-  celebrate({
-    [Segments.BODY]: Joi.object({
-      first_name: Joi.string().min(2).max(50).required(),
-      last_name: Joi.string().min(2).max(50).required(),
-      email: Joi.string().email().required(),
-      phone: Joi.string().required(),
-      suburb: Joi.string().allow("", null),
-      interested: Joi.string().valid("yes", "no").required(),
-      timeframe: Joi.string().valid("1-3 months","3-6 months","6+ months","not sure").required(),
-
-      // optional tracking
-      utm_source: Joi.string().allow("", null),
-      utm_medium: Joi.string().allow("", null),
-      utm_campaign: Joi.string().allow("", null),
-    }),
-  }),
+  celebrate({ [Segments.BODY]: leadValidators.createPublicBody }),
   asyncHandler(LeadsCtrl.createPublicLead)
 );
 
@@ -37,7 +23,7 @@ r.get(
   "/",
   celebrate({
     [Segments.QUERY]: Joi.object({
-      status: Joi.string().valid("new","contacted","qualified","viewing","offer","converted","lost"),
+      status: Joi.string().valid("new","contacted","in progress","converted","lost"),
       suburb: Joi.string(),
       category: Joi.string().valid("HOT","WARM","COLD"),
       limit: Joi.number().integer().min(1).max(100).default(20),
@@ -65,11 +51,7 @@ r.patch(
   "/:id/status",
   celebrate({
     [Segments.PARAMS]: Joi.object({ id: Joi.string().required() }),
-    [Segments.BODY]: Joi.object({
-      status: Joi.string().valid("new","contacted","qualified","viewing","offer","converted","lost").required(),
-      notes: Joi.string().allow(""),
-      changed_by: Joi.string().required(),
-    }),
+    [Segments.BODY]: leadValidators.statusBody,
   }),
   asyncHandler(LeadsCtrl.updateLeadStatus)
 );

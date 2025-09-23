@@ -8,9 +8,9 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 export async function createLeadFromPublicForm(form, reqMeta) {
   const now = new Date();
 
-  // 1) scoring
+  // 1) scoring - computeScore returns total_score and category
   const scoring = computeScore({ interested: form.interested, timeframe: form.timeframe });
-  const score = scoring.score || 0;
+  const score = scoring.total_score || 0;
 
   // 2) dedupe
   const last4 = (form.phone.match(/\d/g) || []).slice(-4).join("");
@@ -22,40 +22,45 @@ export async function createLeadFromPublicForm(form, reqMeta) {
     return { reused: true, lead_id };
   }
 
-  // 3) build doc
+  // 3) build canonical lead doc that matches requested schema
   const leadDoc = {
-    lead_id: null, // will be set after add
+    // lead_id will be set to doc id after write
+    lead_id: null,
     contact: {
-      first_name: form.first_name.trim(),
-      last_name:  form.last_name.trim(),
-      email:      form.email.toLowerCase(),
-      phone:      form.phone.trim(),
+      first_name: (form.first_name || "").trim(),
+      last_name: (form.last_name || "").trim(),
+      email: (form.email || "").toLowerCase(),
+      phone: (form.phone || "").trim(),
       preferred_contact: form.preferred_contact || "both",
-      suburb:     form.suburb || "",
-      timeframe:  form.timeframe || "not sure",
-      score,
+      suburb: form.suburb,
+      timeframe: form.timeframe || "not sure",
+      score: Number.isFinite(score) ? score : 0,
     },
     status: {
       current: "new",
-      history: [{
-        status: "new",
-        changed_at: now,
-        changed_by: "system",
-        notes: "Lead from homepage form"
-      }]
+      history: [
+        {
+          status: "new",
+          changed_at: now,
+          changed_by: reqMeta?.userId || "system",
+          notes: "Lead from homepage form",
+        },
+      ],
     },
     metadata: {
       created_at: now,
       updated_at: now,
       deleted_at: null,
       version: 1,
-      tags: [form.suburb || ""].filter(Boolean),
+      tags: [form.suburb].filter(Boolean),
       custom_fields: {},
-    }
+    },
   };
 
-  // write
-  const ref = await db().collection("leads").add(leadDoc);
+  // write using a generated doc (so id is known)
+  const ref = db().collection("leads").doc();
+  await ref.set(leadDoc);
+  // set lead_id to the doc id and update the doc
   await ref.update({ lead_id: ref.id });
   await dedupeRef.set({ lead_id: ref.id, created_at: now });
 
