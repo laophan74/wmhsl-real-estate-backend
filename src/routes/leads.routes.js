@@ -7,7 +7,6 @@ const r = Router();
 
 /**
  * POST /api/v1/leads/public
- * Nhận form homepage (public), tạo lead theo schema report
  */
 r.post(
   "/public",
@@ -16,7 +15,7 @@ r.post(
       first_name: Joi.string().min(2).max(50).required(),
       last_name: Joi.string().min(2).max(50).required(),
       email: Joi.string().email().required(),
-      phone: Joi.string().required(), // pattern AU mobile có thể áp trong controller/validator riêng
+      phone: Joi.string().required(),
       suburb: Joi.string().allow("", null),
       interested: Joi.string().valid("yes", "no").required(),
       timeframe: Joi.string().valid("1-3 months","3-6 months","6+ months","not sure").required(),
@@ -60,7 +59,7 @@ r.get(
 
 /**
  * PATCH /api/v1/leads/:id/status
- * Update status (và push history)
+ * Update status
  */
 r.patch(
   "/:id/status",
