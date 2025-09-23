@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "main": "src/index.js",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "seed-sample": "node scripts/seed-sample.js",
     "dump-db": "node scripts/dump-db.js",
