@@ -8,8 +8,13 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 export async function createLeadFromPublicForm(form, reqMeta) {
   const now = new Date();
 
-  // 1) scoring - computeScore returns total_score and category
-  const scoring = computeScore({ interested: form.interested, timeframe: form.timeframe });
+  // Normalize buying interest (accept either interested_buying or buying from client)
+  const buyingRaw = form.interested_buying || form.buying || "no";
+  const buyingInterestBool = String(buyingRaw).toLowerCase() === "yes"; // boolean
+
+  // 1) scoring - pass buyingInterest if you want score to account for it
+  // (update computeScore signature if necessary)
+  const scoring = computeScore({ interested: form.interested, timeframe: form.timeframe, buying: buyingInterestBool });
   const score = scoring.total_score || 0;
 
   // 2) dedupe
@@ -34,6 +39,8 @@ export async function createLeadFromPublicForm(form, reqMeta) {
       preferred_contact: form.preferred_contact || "both",
       suburb: form.suburb,
       timeframe: form.timeframe || "not sure",
+      // NEW: store buying interest as boolean (or keep string if you prefer)
+      buying_interest: buyingInterestBool,
       score: Number.isFinite(score) ? score : 0,
     },
     status: {
@@ -53,7 +60,10 @@ export async function createLeadFromPublicForm(form, reqMeta) {
       deleted_at: null,
       version: 1,
       tags: [form.suburb].filter(Boolean),
-      custom_fields: {},
+      custom_fields: {
+        // keep extensible custom fields; copy buying interest here for reporting flexibility
+        buying_interest: buyingInterestBool,
+      },
     },
   };
 
@@ -66,7 +76,6 @@ export async function createLeadFromPublicForm(form, reqMeta) {
 
   return { reused: false, lead_id: ref.id, score };
 }
-
 // ===== LIST =====
 export async function listLeads({ status, suburb, limit = 20, offset = 0, q }) {
   let ref = db().collection("leads");
