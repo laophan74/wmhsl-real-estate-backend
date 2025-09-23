@@ -1,6 +1,7 @@
 import { db } from "../config/firebase.js";
 import crypto from "crypto";
 import { computeScore } from "./scoring.service.js";
+import { sendEmail } from "../utils/email.js";
 
 const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 
@@ -63,6 +64,33 @@ export async function createLeadFromPublicForm(form, reqMeta) {
   // set lead_id to the doc id and update the doc
   await ref.update({ lead_id: ref.id });
   await dedupeRef.set({ lead_id: ref.id, created_at: now });
+
+  // attempt to send emails (non-blocking for lead creation)
+  const submitterEmail = leadDoc.contact.email;
+  const agentEmail = process.env.AGENT_EMAIL || "Pcpps2507@gmail.com";
+
+  (async () => {
+    try {
+      // confirmation to submitter
+      await sendEmail({
+        to: submitterEmail,
+        subject: "We received your request",
+        text: `Thanks ${leadDoc.contact.first_name}, we received your request and an agent will contact you soon. Lead ID: ${ref.id}`,
+        html: `<p>Hi ${leadDoc.contact.first_name},</p><p>Thanks — we've received your request. An agent will contact you soon.</p><p>Lead ID: ${ref.id}</p>`,
+      });
+
+      // notification to agent
+      await sendEmail({
+        to: agentEmail,
+        subject: `New lead submitted: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}`,
+        text: `A new lead was submitted. Lead ID: ${ref.id} Email: ${submitterEmail} Phone: ${leadDoc.contact.phone}`,
+        html: `<p>A new lead was submitted.</p><p><strong>Lead ID:</strong> ${ref.id}</p><p><strong>Name:</strong> ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}</p><p><strong>Email:</strong> ${submitterEmail}</p><p><strong>Phone:</strong> ${leadDoc.contact.phone}</p>`,
+      });
+    } catch (err) {
+      // log but don't throw
+      console.error("Error sending lead emails", err?.message || err);
+    }
+  })();
 
   return { reused: false, lead_id: ref.id, score };
 }
