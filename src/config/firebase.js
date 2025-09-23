@@ -25,6 +25,14 @@ export function initFirebase() {
   let { FIREBASE_PRIVATE_KEY } = process.env;
 
   if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+    // Some platforms (or accidental quoting) may store the private key with literal
+    // "\n" sequences or wrapped in quotes. Normalize common variants to an actual
+    // PEM with real newlines so firebase-admin can parse it.
+    //  - Replace escaped \n with real newlines
+    //  - If the value is double-escaped (\\n), replace that too
+    //  - Strip surrounding quotes if the value was pasted with them
+    FIREBASE_PRIVATE_KEY = FIREBASE_PRIVATE_KEY.replace(/^\"|\"$/g, "");
+    FIREBASE_PRIVATE_KEY = FIREBASE_PRIVATE_KEY.replace(/\\\\n/g, "\n");
     FIREBASE_PRIVATE_KEY = FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
 
     admin.initializeApp({
