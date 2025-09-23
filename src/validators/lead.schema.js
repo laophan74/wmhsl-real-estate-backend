@@ -13,9 +13,10 @@ export const createPublicBody = Joi.object({
   preferred_contact: Joi.string().valid("email", "phone", "both").default("both"),
   suburb: Joi.string().valid(...ALLOWED_SUBURBS).required(),
   timeframe: Joi.string().valid("1-3 months", "3-6 months", "6+ months", "not sure").required(),
-  interested: Joi.string().valid("yes","no").required(),
+  // selling interest (existing)
+  interested: Joi.string().valid("yes", "no").required(),
 
-  // NEW: allow buying interest from frontend; accept either name
+  // NEW: buying interest: accept either name the frontend might send
   interested_buying: Joi.string().valid("yes", "no").optional(),
   buying: Joi.string().valid("yes", "no").optional(),
 
