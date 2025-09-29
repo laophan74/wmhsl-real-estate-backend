@@ -8,3 +8,4 @@ Mailer(SMTP): message sent {
   response: '250 2.0.0 OK  1759154391 98e67ed59e1d1-3341bd90327sm17324103a91.3 - gsmtp',
   port: 465
 }
+[0mGET /healthz [32m200[0m 0.463 ms - 11[0m

@@ -51,6 +51,46 @@ export async function sendMail({ to, subject, text, html, from }) {
     return null;
   }
 
+  // Prefer HTTPS provider if configured (more reliable on serverless)
+  const sgKey = process.env.SENDGRID_API_KEY && String(process.env.SENDGRID_API_KEY).trim();
+  if (sgKey) {
+    try {
+      const sender = from || process.env.SENDER_EMAIL || process.env.SMTP_USER;
+      const payload = {
+        personalizations: [{ to: Array.isArray(to) ? to.map((x) => ({ email: x })) : [{ email: to }] }],
+        from: { email: sender },
+        subject,
+        content: [
+          ...(text ? [{ type: 'text/plain', value: text }] : []),
+          ...(html ? [{ type: 'text/html', value: html }] : []),
+        ],
+      };
+      const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sgKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        const errInfo = { status: res.status, statusText: res.statusText, body };
+        console.error('Mailer(SendGrid): send error', errInfo);
+        logToFile({ level: 'error', event: 'sendgrid_error', ...errInfo });
+      } else {
+        console.log('Mailer(SendGrid): message accepted', { to, subject, status: res.status });
+        logToFile({ level: 'info', event: 'sendgrid_sent', to, subject, status: res.status });
+        return { provider: 'sendgrid', status: res.status };
+      }
+      // fall through to SMTP if SendGrid failed
+    } catch (e) {
+      console.error('Mailer(SendGrid): exception', e?.message || e);
+      logToFile({ level: 'error', event: 'sendgrid_exception', error: e && (e.stack || e.message) });
+      // fallback to SMTP
+    }
+  }
+
   const sender = from || process.env.SENDER_EMAIL || process.env.SMTP_USER;
   const transports = buildSmtpTransports();
 
@@ -63,6 +103,7 @@ export async function sendMail({ to, subject, text, html, from }) {
 
   let lastErr = null;
   for (const conf of transports) {
+    console.log('Mailer(SMTP): trying transport', { host: conf.host, port: conf.port, secure: !!conf.secure, user: (process.env.SMTP_USER || '').trim() });
     const transporter = nodemailer.createTransport({
       host: conf.host,
       port: conf.port,
