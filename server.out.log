@@ -1,30 +1,8 @@
 [api] running on :8080
-[mailer] about to send thank-you to submitter { to: 'pcpps2507+resendlocal@gmail.com' }
-[0mPOST /api/v1/leads/public [32m201[0m 1094.847 ms - 60[0m
-Mailer(SMTP): trying transport {
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  user: 'pcpps2507@gmail.com'
-}
-Mailer(SMTP): message sent {
-  to: 'pcpps2507+resendlocal@gmail.com',
-  subject: 'Thanks for your enquiry — we received your lead (5tCPAfz9chS9QACLgvk3)',
-  messageId: '<1c945353-0701-4e56-fcad-704fa13f0ab2@resend.dev>',
-  response: '250 2.0.0 OK  1759157637 d9443c01a7336-27ed671d8c6sm133183865ad.56 - gsmtp',
-  port: 465
-}
-[mailer] about to send admin notification { to: 'pcpps2507@gmail.com' }
-Mailer(SMTP): trying transport {
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  user: 'pcpps2507@gmail.com'
-}
-Mailer(SMTP): message sent {
+[mailer] about to send admin notification (only) { to: 'pcpps2507@gmail.com' }
+[0mPOST /api/v1/leads/public [32m201[0m 941.517 ms - 60[0m
+Mailer(Resend): message accepted {
   to: 'pcpps2507@gmail.com',
-  subject: 'New lead received: Resend E2E (5tCPAfz9chS9QACLgvk3)',
-  messageId: '<0d7a4738-e672-0e89-2501-c909e44c6051@gmail.com>',
-  response: '250 2.0.0 OK  1759157641 98e67ed59e1d1-338386fe167sm1533416a91.6 - gsmtp',
-  port: 465
+  subject: 'New lead received: OnlyAdmin Notify (xbUq3nqD8Rxp1uM9CL8t)',
+  status: 200
 }
