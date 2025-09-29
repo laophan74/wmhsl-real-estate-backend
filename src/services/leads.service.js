@@ -86,48 +86,60 @@ export async function createLeadFromPublicForm(form, reqMeta) {
   await ref.update({ lead_id: ref.id });
   await dedupeRef.set({ lead_id: ref.id, created_at: now });
 
-  // Send confirmation to submitter and notification to agent (best-effort, non-fatal)
-  (async () => {
-    try {
-  const submitterEmail = leadDoc.contact.email;
-  const brand = process.env.BRAND_NAME || 'Stone Real Estate';
-  // Admin email can be overridden by ADMIN_EMAIL, fallback to AGENT_EMAIL or default address
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.AGENT_EMAIL || "Pcpps2507@gmail.com";
-  // Force sender to the admin address unless SENDER_EMAIL env explicitly set
-  const defaultSender = process.env.SENDER_EMAIL || adminEmail;
+  // Send confirmation to submitter and notification to agent
+  // On serverless (Vercel), we MUST await to avoid the platform freezing background tasks after response.
+  const notify = async () => {
+    const submitterEmail = leadDoc.contact.email;
+    const brand = process.env.BRAND_NAME || 'Stone Real Estate';
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.AGENT_EMAIL || "Pcpps2507@gmail.com";
+    const defaultSender = process.env.SENDER_EMAIL || adminEmail;
 
-      // 1) Thank-you email to the customer (from admin address -> to submitter)
-      if (submitterEmail) {
-        console.log('[mailer] about to send thank-you to submitter', { to: submitterEmail });
-        await sendMail({
-          to: submitterEmail,
-          from: defaultSender,
-          subject: `Thanks for your enquiry — we received your lead (${ref.id})`,
-          text: `Hi ${leadDoc.contact.first_name || ''},\n\nThanks for your enquiry. Our team at ${brand} will contact you shortly. Reference: ${ref.id}\n\nRegards,\n${brand}`,
-          html: `<p>Hi ${leadDoc.contact.first_name || ''},</p><p>Thanks for your enquiry. Our team at <strong>${brand}</strong> will contact you shortly.</p><p>Reference: <strong>${ref.id}</strong></p><p>Regards,<br/>${brand}</p>`,
-        });
-      }
-
-      // 2) Notification to admin (from admin -> to admin)
-      if (adminEmail) {
-        // ensure admin receives a short summary and the raw form
-        const adminFrom = adminEmail; // send as admin
-        const adminSubject = `New lead received: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name} (${ref.id})`;
-        const adminText = `New lead ${ref.id} created.\n\nName: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}\nEmail: ${leadDoc.contact.email}\nPhone: ${leadDoc.contact.phone}\nSuburb: ${leadDoc.contact.suburb}\nTimeframe: ${leadDoc.contact.timeframe}\nSelling interest: ${leadDoc.contact.selling_interest}\nBuying interest: ${leadDoc.contact.buying_interest}\n\nView in Firestore with ID: ${ref.id}`;
-
-  console.log('[mailer] about to send admin notification', { to: adminEmail });
-        await sendMail({
-          to: adminEmail,
-          from: adminFrom,
-          subject: adminSubject,
-          text: adminText,
-          html: `<p>New lead <strong>${ref.id}</strong> created.</p><ul><li>Name: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}</li><li>Email: ${leadDoc.contact.email}</li><li>Phone: ${leadDoc.contact.phone}</li><li>Suburb: ${leadDoc.contact.suburb}</li><li>Timeframe: ${leadDoc.contact.timeframe}</li><li>Selling interest: ${leadDoc.contact.selling_interest}</li><li>Buying interest: ${leadDoc.contact.buying_interest}</li></ul>`,
-        });
-      }
-    } catch (err) {
-      console.warn('Error sending notification emails:', err?.message || err);
+    // 1) Thank-you email to the customer (from admin address -> to submitter)
+    if (submitterEmail) {
+      console.log('[mailer] about to send thank-you to submitter', { to: submitterEmail });
+      await sendMail({
+        to: submitterEmail,
+        from: defaultSender,
+        subject: `Thanks for your enquiry — we received your lead (${ref.id})`,
+        text: `Hi ${leadDoc.contact.first_name || ''},\n\nThanks for your enquiry. Our team at ${brand} will contact you shortly. Reference: ${ref.id}\n\nRegards,\n${brand}`,
+        html: `<p>Hi ${leadDoc.contact.first_name || ''},</p><p>Thanks for your enquiry. Our team at <strong>${brand}</strong> will contact you shortly.</p><p>Reference: <strong>${ref.id}</strong></p><p>Regards,<br/>${brand}</p>`,
+      });
     }
-  })();
+
+    // 2) Notification to admin (from admin -> to admin)
+    if (adminEmail) {
+      const adminFrom = adminEmail; // send as admin
+      const adminSubject = `New lead received: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name} (${ref.id})`;
+      const adminText = `New lead ${ref.id} created.\n\nName: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}\nEmail: ${leadDoc.contact.email}\nPhone: ${leadDoc.contact.phone}\nSuburb: ${leadDoc.contact.suburb}\nTimeframe: ${leadDoc.contact.timeframe}\nSelling interest: ${leadDoc.contact.selling_interest}\nBuying interest: ${leadDoc.contact.buying_interest}\n\nView in Firestore with ID: ${ref.id}`;
+
+      console.log('[mailer] about to send admin notification', { to: adminEmail });
+      await sendMail({
+        to: adminEmail,
+        from: adminFrom,
+        subject: adminSubject,
+        text: adminText,
+        html: `<p>New lead <strong>${ref.id}</strong> created.</p><ul><li>Name: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}</li><li>Email: ${leadDoc.contact.email}</li><li>Phone: ${leadDoc.contact.phone}</li><li>Suburb: ${leadDoc.contact.suburb}</li><li>Timeframe: ${leadDoc.contact.timeframe}</li><li>Selling interest: ${leadDoc.contact.selling_interest}</li><li>Buying interest: ${leadDoc.contact.buying_interest}</li></ul>`,
+      });
+    }
+  };
+
+  const awaitEmails = (String(process.env.MAILER_AWAIT || '').toLowerCase() === 'true')
+    || (String(process.env.VERCEL || '').toLowerCase() === '1');
+
+  if (awaitEmails) {
+    try {
+      await notify();
+    } catch (err) {
+      console.warn('Error sending notification emails (awaited):', err?.message || err);
+    }
+  } else {
+    // Local/dev: fire-and-forget
+    (async () => {
+      try { await notify(); } catch (err) {
+        console.warn('Error sending notification emails:', err?.message || err);
+      }
+    })();
+  }
 
   return { reused: false, lead_id: ref.id, score };
 }
