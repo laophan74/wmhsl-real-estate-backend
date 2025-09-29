@@ -15,8 +15,11 @@ function logToFile(entry) {
 
 function buildSmtpTransports() {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS; // Gmail App Password
+  // Sanitize credentials: trim quotes/whitespace and remove spaces in app-password (Gmail shows spaces for readability)
+  const rawUser = process.env.SMTP_USER || '';
+  const rawPass = process.env.SMTP_PASS || '';
+  const user = rawUser.trim().replace(/^['"]|['"]$/g, '');
+  const pass = rawPass.trim().replace(/^['"]|['"]$/g, '').replace(/\s+/g, ''); // Gmail App Password
   if (!user || !pass) return [];
 
   const portEnv = Number(process.env.SMTP_PORT || 0);
