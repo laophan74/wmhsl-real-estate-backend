@@ -51,6 +51,43 @@ export async function sendMail({ to, subject, text, html, from }) {
     return null;
   }
 
+  // 1) Prefer Resend HTTP API (free developer tier; works well on serverless) if configured
+  const resendKey = process.env.RESEND_API_KEY && String(process.env.RESEND_API_KEY).trim();
+  if (resendKey) {
+    try {
+      const sender = from || process.env.SENDER_EMAIL || process.env.SMTP_USER;
+      const payload = {
+        from: sender,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        ...(text ? { text } : {}),
+        ...(html ? { html } : {}),
+      };
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const bodyText = await res.text().catch(() => '');
+      if (res.ok) {
+        console.log('Mailer(Resend): message accepted', { to, subject, status: res.status });
+        logToFile({ level: 'info', event: 'resend_sent', to, subject, status: res.status, body: bodyText });
+        return { provider: 'resend', status: res.status };
+      } else {
+        console.error('Mailer(Resend): send error', { status: res.status, statusText: res.statusText, body: bodyText });
+        logToFile({ level: 'error', event: 'resend_error', status: res.status, statusText: res.statusText, body: bodyText });
+        // fall through to next provider
+      }
+    } catch (e) {
+      console.error('Mailer(Resend): exception', e?.message || e);
+      logToFile({ level: 'error', event: 'resend_exception', error: e && (e.stack || e.message) });
+      // fallback to next provider
+    }
+  }
+
   // Prefer HTTPS provider if configured (more reliable on serverless)
   const sgKey = process.env.SENDGRID_API_KEY && String(process.env.SENDGRID_API_KEY).trim();
   if (sgKey) {

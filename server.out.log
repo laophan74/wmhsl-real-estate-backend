@@ -1,11 +1,9 @@
 [api] running on :8080
-[mailer] about to send thank-you to submitter { to: 'pcpps2507+brandlocal@gmail.com' }
-[0mPOST /api/v1/leads/public [32m201[0m 1065.564 ms - 60[0m
-Mailer(SMTP): message sent {
-  to: 'pcpps2507+brandlocal@gmail.com',
-  subject: 'Thanks for your enquiry — we received your lead (fdnbWs1RazebDqS1Kadm)',
-  messageId: '<769faa0e-c321-4a13-3f59-4b38586f5ecb@gmail.com>',
-  response: '250 2.0.0 OK  1759154391 98e67ed59e1d1-3341bd90327sm17324103a91.3 - gsmtp',
-  port: 465
+[mailer] about to send thank-you to submitter { to: 'pcpps2507+resendlocal@gmail.com' }
+[0mPOST /api/v1/leads/public [32m201[0m 1094.847 ms - 60[0m
+Mailer(SMTP): trying transport {
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  user: 'pcpps2507@gmail.com'
 }
-[0mGET /healthz [32m200[0m 0.463 ms - 11[0m

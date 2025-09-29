@@ -115,7 +115,7 @@ export async function createLeadFromPublicForm(form, reqMeta) {
         const adminSubject = `New lead received: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name} (${ref.id})`;
         const adminText = `New lead ${ref.id} created.\n\nName: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}\nEmail: ${leadDoc.contact.email}\nPhone: ${leadDoc.contact.phone}\nSuburb: ${leadDoc.contact.suburb}\nTimeframe: ${leadDoc.contact.timeframe}\nSelling interest: ${leadDoc.contact.selling_interest}\nBuying interest: ${leadDoc.contact.buying_interest}\n\nView in Firestore with ID: ${ref.id}`;
 
-        console.log('[mailer] about to send admin notification', { to: agentEmail });
+  console.log('[mailer] about to send admin notification', { to: adminEmail });
         await sendMail({
           to: adminEmail,
           from: adminFrom,
