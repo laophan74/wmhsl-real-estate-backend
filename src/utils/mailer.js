@@ -1,68 +1,56 @@
 import nodemailer from 'nodemailer';
 
-function getSmtpTransport() {
+function buildSmtpTransports() {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.SMTP_PORT || 465);
-  const secure = port === 465;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS; // Gmail App Password
+  if (!user || !pass) return [];
 
-  if (!user || !pass) return null;
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  });
+  // Try STARTTLS (port 587) first, then SSL (port 465)
+  return [
+    { host, port: 587, secure: false, requireTLS: true, auth: { user, pass } },
+    { host, port: 465, secure: true, auth: { user, pass } },
+  ];
 }
 
 export async function sendMail({ to, subject, text, html, from }) {
-  // Prefer SendGrid (HTTPS) when available — more reliable from serverless platforms.
-  const sendGridKey = process.env.SENDGRID_API_KEY;
   const sender = from || process.env.SENDER_EMAIL || process.env.SMTP_USER;
+  const transports = buildSmtpTransports();
 
-  if (sendGridKey) {
-    try {
-      // Dynamic import so the code doesn't crash if @sendgrid/mail is not installed.
-      const sgMailPkg = await import('@sendgrid/mail').catch(() => null);
-      if (sgMailPkg && sgMailPkg.default) {
-        const sgMailLocal = sgMailPkg.default;
-        sgMailLocal.setApiKey(sendGridKey);
-        const msg = { to, from: sender, subject, text, html };
-        const res = await sgMailLocal.send(msg);
-        console.log('Mailer(SendGrid): message sent', { to, subject, response: res && res[0] && res[0].statusCode });
-        return res;
-      } else {
-        console.warn('Mailer: SENDGRID_API_KEY set but @sendgrid/mail package not installed - skipping SendGrid');
-      }
-    } catch (err) {
-      console.error('Mailer(SendGrid): send error', err && err.stack ? err.stack : err);
-      // fallthrough to SMTP fallback
-    }
-  }
-
-  // Fallback to SMTP (nodemailer)
-  const transporter = getSmtpTransport();
-  if (!transporter) {
-    console.warn('Mailer: no transport configured (no SENDGRID_API_KEY and SMTP creds missing)');
+  if (!transports.length) {
+    console.warn('Mailer: SMTP_USER or SMTP_PASS missing — no SMTP transport available');
     return null;
   }
 
-  const msg = {
-    from: sender,
-    to,
-    subject,
-    text,
-    html,
-  };
+  const msg = { from: sender, to, subject, text, html };
 
-  try {
-    const info = await transporter.sendMail(msg);
-    console.log('Mailer(SMTP): message sent', { to, subject, messageId: info.messageId, response: info.response });
-    return info;
-  } catch (err) {
-    console.error('Mailer(SMTP): send error', err && err.stack ? err.stack : err);
-    throw err;
+  let lastErr = null;
+  for (const conf of transports) {
+    const transporter = nodemailer.createTransport({
+      host: conf.host,
+      port: conf.port,
+      secure: conf.secure,
+      requireTLS: conf.requireTLS || false,
+      auth: conf.auth,
+      // tune timeouts to be slightly more lenient on serverless platforms
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 20000,
+      tls: { rejectUnauthorized: true },
+    });
+
+    try {
+      const info = await transporter.sendMail(msg);
+      console.log('Mailer(SMTP): message sent', { to, subject, messageId: info.messageId, response: info.response, port: conf.port });
+      return info;
+    } catch (err) {
+      lastErr = err;
+      console.error('Mailer(SMTP): send error', { port: conf.port, message: err && err.message });
+      // continue to next transport attempt
+    }
   }
+
+  // All attempts failed — throw the last error so caller can log/handle.
+  console.error('Mailer: all SMTP transports failed', lastErr && lastErr.stack ? lastErr.stack : lastErr);
+  throw lastErr;
 }
