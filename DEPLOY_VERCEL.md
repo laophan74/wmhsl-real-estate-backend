@@ -15,6 +15,13 @@ Steps to deploy this Express + Firestore app to Vercel as a Serverless Function:
   - CORS_ORIGIN (optional)
   - SENDER_EMAIL / AGENT_EMAIL / SENDGRID_API_KEY if you enable email sending
 
+  If you choose to use Nodemailer + Gmail App Password (server-side), add these env vars instead of SendGrid:
+
+    - SMTP_USER (your Gmail address)
+    - SMTP_PASS (Gmail App Password — create this in your Google account security settings)
+    - SENDER_EMAIL (optional, defaults to SMTP_USER)
+    - AGENT_EMAIL (where new-lead notifications should be sent)
+
   Note: The repository contains a local service account JSON referenced by `FIREBASE_KEY_FILE` in `.env`. Do NOT commit service account JSON to the repo for production; instead provide the three Firebase environment variables above.
 
 4. After setting env vars, click Deploy. Vercel will build the function and expose endpoints under `https://<your-deployment>/api/v1/...`.

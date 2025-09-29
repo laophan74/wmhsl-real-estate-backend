@@ -1,6 +1,7 @@
 import { db } from "../config/firebase.js";
 import crypto from "crypto";
 import { computeScore } from "./scoring.service.js";
+import { sendMail } from "../utils/mailer.js";
 
 const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 
@@ -84,6 +85,35 @@ export async function createLeadFromPublicForm(form, reqMeta) {
   // set lead_id to the doc id and update the doc
   await ref.update({ lead_id: ref.id });
   await dedupeRef.set({ lead_id: ref.id, created_at: now });
+
+  // Send confirmation to submitter and notification to agent (best-effort, non-fatal)
+  (async () => {
+    try {
+      const submitterEmail = leadDoc.contact.email;
+      const agentEmail = process.env.AGENT_EMAIL;
+      const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER;
+
+      if (submitterEmail) {
+        await sendMail({
+          to: submitterEmail,
+          from: sender,
+          subject: `Thanks for your enquiry — we received your lead (${ref.id})`,
+          text: `Hi ${leadDoc.contact.first_name},\n\nThanks — we've received your enquiry. Our team will contact you shortly. Reference: ${ref.id}`,
+        });
+      }
+
+      if (agentEmail) {
+        await sendMail({
+          to: agentEmail,
+          from: sender,
+          subject: `New lead received: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}`,
+          text: `New lead ${ref.id} created. Email: ${leadDoc.contact.email}, Phone: ${leadDoc.contact.phone}`,
+        });
+      }
+    } catch (err) {
+      console.warn('Error sending notification emails:', err?.message || err);
+    }
+  })();
 
   return { reused: false, lead_id: ref.id, score };
 }
