@@ -89,32 +89,35 @@ export async function createLeadFromPublicForm(form, reqMeta) {
   // Send confirmation to submitter and notification to agent (best-effort, non-fatal)
   (async () => {
     try {
-      const submitterEmail = leadDoc.contact.email;
-      // Defaults: use the project AGENT_EMAIL or fallback to the admin address you requested
-      const agentEmail = process.env.AGENT_EMAIL || "Pcpps2507@gmail.com";
-      // Force sender to the requested admin address unless SENDER_EMAIL env explicitly set
-      const defaultSender = process.env.SENDER_EMAIL || "Pcpps2507@gmail.com";
+  const submitterEmail = leadDoc.contact.email;
+  const brand = process.env.BRAND_NAME || 'Stone Real Estate';
+  // Admin email can be overridden by ADMIN_EMAIL, fallback to AGENT_EMAIL or default address
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.AGENT_EMAIL || "Pcpps2507@gmail.com";
+  // Force sender to the admin address unless SENDER_EMAIL env explicitly set
+  const defaultSender = process.env.SENDER_EMAIL || adminEmail;
 
       // 1) Thank-you email to the customer (from admin address -> to submitter)
       if (submitterEmail) {
+        console.log('[mailer] about to send thank-you to submitter', { to: submitterEmail });
         await sendMail({
           to: submitterEmail,
           from: defaultSender,
           subject: `Thanks for your enquiry — we received your lead (${ref.id})`,
-          text: `Hi ${leadDoc.contact.first_name || ''},\n\nThanks for your enquiry. Our team will contact you shortly. Reference: ${ref.id}\n\nRegards,\nStone Real Estate`,
-          html: `<p>Hi ${leadDoc.contact.first_name || ''},</p><p>Thanks for your enquiry. Our team will contact you shortly.</p><p>Reference: <strong>${ref.id}</strong></p><p>Regards,<br/>Stone Real Estate</p>`,
+          text: `Hi ${leadDoc.contact.first_name || ''},\n\nThanks for your enquiry. Our team at ${brand} will contact you shortly. Reference: ${ref.id}\n\nRegards,\n${brand}`,
+          html: `<p>Hi ${leadDoc.contact.first_name || ''},</p><p>Thanks for your enquiry. Our team at <strong>${brand}</strong> will contact you shortly.</p><p>Reference: <strong>${ref.id}</strong></p><p>Regards,<br/>${brand}</p>`,
         });
       }
 
       // 2) Notification to admin (from admin -> to admin)
-      if (agentEmail) {
+      if (adminEmail) {
         // ensure admin receives a short summary and the raw form
-        const adminFrom = agentEmail; // send as admin
+        const adminFrom = adminEmail; // send as admin
         const adminSubject = `New lead received: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name} (${ref.id})`;
         const adminText = `New lead ${ref.id} created.\n\nName: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}\nEmail: ${leadDoc.contact.email}\nPhone: ${leadDoc.contact.phone}\nSuburb: ${leadDoc.contact.suburb}\nTimeframe: ${leadDoc.contact.timeframe}\nSelling interest: ${leadDoc.contact.selling_interest}\nBuying interest: ${leadDoc.contact.buying_interest}\n\nView in Firestore with ID: ${ref.id}`;
 
+        console.log('[mailer] about to send admin notification', { to: agentEmail });
         await sendMail({
-          to: agentEmail,
+          to: adminEmail,
           from: adminFrom,
           subject: adminSubject,
           text: adminText,

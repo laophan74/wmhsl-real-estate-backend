@@ -21,10 +21,16 @@ let initialized = false;
 export function initFirebase() {
   if (initialized) return admin;
 
-  const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL } = process.env;
+  const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_KEY_FILE } = process.env;
   let { FIREBASE_PRIVATE_KEY } = process.env;
 
-  if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  // Prefer explicit service account file when provided
+  if (FIREBASE_KEY_FILE) {
+    const serviceAccount = readServiceAccountFromFile();
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } else if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     // Some platforms (or accidental quoting) may store the private key with literal
     // "\n" sequences or wrapped in quotes. Normalize common variants to an actual
     // PEM with real newlines so firebase-admin can parse it.
@@ -43,6 +49,7 @@ export function initFirebase() {
       }),
     });
   } else {
+    // Fallback to service account file if available, otherwise throw a helpful error
     const serviceAccount = readServiceAccountFromFile();
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
