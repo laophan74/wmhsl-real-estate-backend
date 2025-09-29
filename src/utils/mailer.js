@@ -32,5 +32,12 @@ export async function sendMail({ to, subject, text, html, from }) {
     html,
   };
 
-  return transporter.sendMail(msg);
+  try {
+    const info = await transporter.sendMail(msg);
+    console.log('Mailer: message sent', { to, subject, messageId: info.messageId, response: info.response });
+    return info;
+  } catch (err) {
+    console.error('Mailer: send error', err && err.stack ? err.stack : err);
+    throw err;
+  }
 }

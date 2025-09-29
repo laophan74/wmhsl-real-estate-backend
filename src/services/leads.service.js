@@ -90,24 +90,35 @@ export async function createLeadFromPublicForm(form, reqMeta) {
   (async () => {
     try {
       const submitterEmail = leadDoc.contact.email;
-      const agentEmail = process.env.AGENT_EMAIL;
-      const sender = process.env.SENDER_EMAIL || process.env.SMTP_USER;
+      // Defaults: use the project AGENT_EMAIL or fallback to the admin address you requested
+      const agentEmail = process.env.AGENT_EMAIL || "Pcpps2507@gmail.com";
+      // Force sender to the requested admin address unless SENDER_EMAIL env explicitly set
+      const defaultSender = process.env.SENDER_EMAIL || "Pcpps2507@gmail.com";
 
+      // 1) Thank-you email to the customer (from admin address -> to submitter)
       if (submitterEmail) {
         await sendMail({
           to: submitterEmail,
-          from: sender,
+          from: defaultSender,
           subject: `Thanks for your enquiry — we received your lead (${ref.id})`,
-          text: `Hi ${leadDoc.contact.first_name},\n\nThanks — we've received your enquiry. Our team will contact you shortly. Reference: ${ref.id}`,
+          text: `Hi ${leadDoc.contact.first_name || ''},\n\nThanks for your enquiry. Our team will contact you shortly. Reference: ${ref.id}\n\nRegards,\nStone Real Estate`,
+          html: `<p>Hi ${leadDoc.contact.first_name || ''},</p><p>Thanks for your enquiry. Our team will contact you shortly.</p><p>Reference: <strong>${ref.id}</strong></p><p>Regards,<br/>Stone Real Estate</p>`,
         });
       }
 
+      // 2) Notification to admin (from admin -> to admin)
       if (agentEmail) {
+        // ensure admin receives a short summary and the raw form
+        const adminFrom = agentEmail; // send as admin
+        const adminSubject = `New lead received: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name} (${ref.id})`;
+        const adminText = `New lead ${ref.id} created.\n\nName: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}\nEmail: ${leadDoc.contact.email}\nPhone: ${leadDoc.contact.phone}\nSuburb: ${leadDoc.contact.suburb}\nTimeframe: ${leadDoc.contact.timeframe}\nSelling interest: ${leadDoc.contact.selling_interest}\nBuying interest: ${leadDoc.contact.buying_interest}\n\nView in Firestore with ID: ${ref.id}`;
+
         await sendMail({
           to: agentEmail,
-          from: sender,
-          subject: `New lead received: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}`,
-          text: `New lead ${ref.id} created. Email: ${leadDoc.contact.email}, Phone: ${leadDoc.contact.phone}`,
+          from: adminFrom,
+          subject: adminSubject,
+          text: adminText,
+          html: `<p>New lead <strong>${ref.id}</strong> created.</p><ul><li>Name: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}</li><li>Email: ${leadDoc.contact.email}</li><li>Phone: ${leadDoc.contact.phone}</li><li>Suburb: ${leadDoc.contact.suburb}</li><li>Timeframe: ${leadDoc.contact.timeframe}</li><li>Selling interest: ${leadDoc.contact.selling_interest}</li><li>Buying interest: ${leadDoc.contact.buying_interest}</li></ul>`,
         });
       }
     } catch (err) {
