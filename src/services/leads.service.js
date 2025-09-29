@@ -94,12 +94,21 @@ export async function createLeadFromPublicForm(form, reqMeta) {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.AGENT_EMAIL || "Pcpps2507@gmail.com";
     const defaultSender = process.env.SENDER_EMAIL || adminEmail;
 
+    // Special handling for onboarding@resend.dev:
+    // Resend Developer mode typically only allows sending to the account email.
+    // If used, force the recipient to the OWNER email to avoid 403.
+    const ownerEmail = process.env.RESEND_OWNER_EMAIL || process.env.ADMIN_EMAIL || '';
+    const usingOnboarding = String(defaultSender).toLowerCase() === 'onboarding@resend.dev';
+    const allowedRecipient = usingOnboarding && ownerEmail ? ownerEmail : null;
+    const disableCustomerMail = String(process.env.DISABLE_CUSTOMER_MAIL || '').toLowerCase() === 'true';
+
     // 1) Thank-you email to the customer (from admin address -> to submitter)
-    if (submitterEmail) {
+    if (submitterEmail && !disableCustomerMail) {
       console.log('[mailer] about to send thank-you to submitter', { to: submitterEmail });
       await sendMail({
-        to: submitterEmail,
+        to: allowedRecipient || submitterEmail,
         from: defaultSender,
+        replyTo: adminEmail,
         subject: `Thanks for your enquiry — we received your lead (${ref.id})`,
         text: `Hi ${leadDoc.contact.first_name || ''},\n\nThanks for your enquiry. Our team at ${brand} will contact you shortly. Reference: ${ref.id}\n\nRegards,\n${brand}`,
         html: `<p>Hi ${leadDoc.contact.first_name || ''},</p><p>Thanks for your enquiry. Our team at <strong>${brand}</strong> will contact you shortly.</p><p>Reference: <strong>${ref.id}</strong></p><p>Regards,<br/>${brand}</p>`,
@@ -114,8 +123,9 @@ export async function createLeadFromPublicForm(form, reqMeta) {
 
       console.log('[mailer] about to send admin notification', { to: adminEmail });
       await sendMail({
-        to: adminEmail,
+        to: allowedRecipient || adminEmail,
         from: adminFrom,
+        replyTo: adminEmail,
         subject: adminSubject,
         text: adminText,
         html: `<p>New lead <strong>${ref.id}</strong> created.</p><ul><li>Name: ${leadDoc.contact.first_name} ${leadDoc.contact.last_name}</li><li>Email: ${leadDoc.contact.email}</li><li>Phone: ${leadDoc.contact.phone}</li><li>Suburb: ${leadDoc.contact.suburb}</li><li>Timeframe: ${leadDoc.contact.timeframe}</li><li>Selling interest: ${leadDoc.contact.selling_interest}</li><li>Buying interest: ${leadDoc.contact.buying_interest}</li></ul>`,

@@ -41,7 +41,7 @@ function buildSmtpTransports() {
   ];
 }
 
-export async function sendMail({ to, subject, text, html, from }) {
+export async function sendMail({ to, subject, text, html, from, replyTo }) {
   // Allow disabling emails entirely via env (useful in preview)
   const emailEnabled = String(process.env.EMAIL_ENABLED || 'true').toLowerCase();
   if (emailEnabled === 'false' || emailEnabled === '0' || emailEnabled === 'no') {
@@ -62,6 +62,7 @@ export async function sendMail({ to, subject, text, html, from }) {
         subject,
         ...(text ? { text } : {}),
         ...(html ? { html } : {}),
+        ...(replyTo ? { reply_to: replyTo } : {}),
       };
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -101,6 +102,7 @@ export async function sendMail({ to, subject, text, html, from }) {
           ...(text ? [{ type: 'text/plain', value: text }] : []),
           ...(html ? [{ type: 'text/html', value: html }] : []),
         ],
+        ...(replyTo ? { reply_to: { email: replyTo } } : {}),
       };
       const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
         method: 'POST',
@@ -136,7 +138,7 @@ export async function sendMail({ to, subject, text, html, from }) {
     return null;
   }
 
-  const msg = { from: sender, to, subject, text, html };
+  const msg = { from: sender, to, subject, text, html, ...(replyTo ? { replyTo } : {}) };
 
   let lastErr = null;
   for (const conf of transports) {
