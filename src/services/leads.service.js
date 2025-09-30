@@ -162,10 +162,10 @@ export async function listLeads({ status, suburb, limit = 20, offset = 0, q }) {
   let ref = db().collection("leads");
   if (status) ref = ref.where("status.current", "==", status);
   if (suburb) ref = ref.where("contact.suburb", "==", suburb);
-  ref = ref.orderBy("metadata.created_at", "desc").limit(limit);
+  ref = ref.orderBy("metadata.created_at", "desc").offset(offset).limit(limit);
   const snap = await ref.get();
   const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  return items.slice(offset);
+  return items;
 }
 
 // ===== GET BY ID =====

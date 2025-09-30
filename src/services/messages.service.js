@@ -22,10 +22,10 @@ export async function createMessage(payload) {
 }
 
 export async function listMessages({ limit = 20, offset = 0 }) {
-  let ref = db().collection('messages').orderBy('metadata.created_at', 'desc').limit(limit);
+  let ref = db().collection('messages').orderBy('metadata.created_at', 'desc').offset(offset).limit(limit);
   const snap = await ref.get();
   const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  return items.slice(offset);
+  return items;
 }
 
 export async function getMessageById(id) {
