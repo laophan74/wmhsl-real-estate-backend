@@ -13,13 +13,19 @@ export function createServer() {
 
   // security & basics
   app.use(helmet());
-  const corsOrigin = process.env.CORS_ORIGIN || false; // e.g. https://your-frontend.com
-  app.use(
-    cors({
-      origin: corsOrigin || undefined,
-      credentials: true,
-    })
-  );
+  const authDisabled = process.env.AUTH_DISABLED === 'true';
+  if (authDisabled) {
+    // Testing mode: allow all origins, no credentials needed
+    app.use(cors({ origin: '*' }));
+  } else {
+    const corsOrigin = process.env.CORS_ORIGIN; // e.g. https://your-frontend.com
+    app.use(
+      cors({
+        origin: corsOrigin, // must be set for credentialed requests
+        credentials: true,
+      })
+    );
+  }
   app.use(express.json({ limit: "1mb" }));
   app.use(morgan("dev"));
   app.set("trust proxy", 1);
