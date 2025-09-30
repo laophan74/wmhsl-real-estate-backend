@@ -198,6 +198,46 @@ export async function updateLeadStatus(id, { status, notes, changed_by }) {
   return { id: updated.id, ...updated.data() };
 }
 
+// ===== GENERIC UPDATE (contact/status/metadata) =====
+export async function updateLead(id, patch) {
+  const ref = db().collection("leads").doc(id);
+  const now = new Date();
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      const e = new Error("Lead not found");
+      e.status = 404;
+      throw e;
+    }
+    const data = snap.data();
+
+    // Build updates
+    const updates = { "metadata.updated_at": now };
+    if (patch.contact) {
+      updates["contact"] = { ...(data.contact || {}), ...patch.contact };
+    }
+    if (patch.metadata) {
+      updates["metadata"] = { ...(data.metadata || {}), ...patch.metadata, updated_at: now };
+    }
+    if (patch.status) {
+      const history = Array.isArray(data.status?.history) ? data.status.history : [];
+      if (patch.status.current && patch.status.current !== data.status?.current) {
+        history.push({
+          status: patch.status.current,
+          changed_at: now,
+          changed_by: patch.status.changed_by || "system",
+          notes: patch.status.notes || "",
+        });
+      }
+      updates["status.current"] = patch.status.current || data.status?.current || "new";
+      updates["status.history"] = history;
+    }
+    tx.set(ref, updates, { merge: true });
+  });
+  const updated = await ref.get();
+  return { id: updated.id, ...updated.data() };
+}
+
 // ===== SOFT DELETE =====
 export async function softDeleteLead(id) {
   const ref = db().collection("leads").doc(id);

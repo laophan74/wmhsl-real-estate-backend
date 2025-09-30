@@ -32,4 +32,39 @@ export const statusBody = Joi.object({
   changed_by: Joi.string().required(),
 });
 
-export default { ALLOWED_SUBURBS, createPublicBody, statusBody };
+// Generic update of a lead (contact/status/metadata)
+const contactShape = Joi.object({
+  first_name: Joi.string().min(2).max(50),
+  last_name: Joi.string().min(2).max(50),
+  email: Joi.string().email(),
+  phone: Joi.string().pattern(/^(?:\+61|0)4\d{8}$/),
+  preferred_contact: Joi.string().valid("email", "phone", "both"),
+  suburb: Joi.string().valid(...ALLOWED_SUBURBS),
+  timeframe: Joi.string().valid("1-3 months", "3-6 months", "6+ months", "not sure"),
+  selling_interest: Joi.boolean(),
+  buying_interest: Joi.boolean(),
+  score: Joi.number().integer().min(0),
+}).unknown(false);
+
+const statusUpdateShape = Joi.object({
+  current: Joi.string().valid("new", "contacted", "in progress", "converted", "lost"),
+  notes: Joi.string().allow("", null),
+  changed_by: Joi.string(),
+}).unknown(false);
+
+const metadataShape = Joi.object({
+  // created_at will be preserved by server
+  updated_at: Joi.any().forbidden(),
+  deleted_at: Joi.any(),
+  version: Joi.number().integer(),
+  tags: Joi.array().items(Joi.string()),
+  custom_fields: Joi.object().unknown(true),
+}).unknown(false);
+
+export const updateLeadBody = Joi.object({
+  contact: contactShape.optional(),
+  status: statusUpdateShape.optional(),
+  metadata: metadataShape.optional(),
+}).min(1);
+
+export default { ALLOWED_SUBURBS, createPublicBody, statusBody, updateLeadBody };

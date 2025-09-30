@@ -56,6 +56,16 @@ r.patch(
   asyncHandler(LeadsCtrl.updateLeadStatus)
 );
 
+// PATCH /api/v1/leads/:id (generic update: contact/status/metadata)
+r.patch(
+  "/:id",
+  celebrate({
+    [Segments.PARAMS]: Joi.object({ id: Joi.string().required() }),
+    [Segments.BODY]: leadValidators.updateLeadBody,
+  }),
+  asyncHandler(LeadsCtrl.updateLead)
+);
+
 /**
  * DELETE /api/v1/leads/:id
  * Soft delete -> metadata.deleted_at

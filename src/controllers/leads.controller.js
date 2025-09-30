@@ -36,3 +36,9 @@ export async function softDeleteLead(req, res) {
   const data = await LeadsSvc.softDeleteLead(req.params.id);
   return res.json(data);
 }
+
+// PATCH /leads/:id (generic update)
+export async function updateLead(req, res) {
+  const data = await LeadsSvc.updateLead(req.params.id, req.body);
+  return res.json(data);
+}
