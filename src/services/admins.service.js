@@ -4,6 +4,12 @@ import bcrypt from "bcryptjs";
 
 const uuid = () => crypto.randomUUID();
 
+function sanitize(admin) {
+  if (!admin) return admin;
+  const { password, password_hash, ...safe } = admin;
+  return safe;
+}
+
 export async function createAdmin(payload) {
   const now = new Date();
   let password_hash = undefined;
@@ -41,7 +47,7 @@ export async function listAdmins({ limit = 20, offset = 0 }) {
       .offset(offset)
       .limit(limit);
     const snap = await ref.get();
-    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const items = snap.docs.map(d => ({ id: d.id, ...sanitize(d.data()) }));
     return items;
   } catch (err) {
     // Fallback when Firestore composite index is missing
@@ -54,7 +60,7 @@ export async function listAdmins({ limit = 20, offset = 0 }) {
     const snap = await ref.get();
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const filtered = all.filter(x => !x?.metadata?.deleted_at);
-    return filtered.slice(offset, offset + limit);
+    return filtered.slice(offset, offset + limit).map(sanitize);
   }
 }
 

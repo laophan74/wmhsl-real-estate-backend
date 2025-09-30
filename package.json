@@ -11,6 +11,7 @@
     "seed-admins-messages": "node scripts/seed-admins-messages.js",
     "dump-db": "node scripts/dump-db.js",
   "set-admin-password": "node scripts/set-admin-password.js",
+  "cleanup-admin-passwords": "node scripts/cleanup-admin-passwords.js",
     "dev": "nodemon --watch src --ext js,json --exec node src/index.js",
     "start": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
