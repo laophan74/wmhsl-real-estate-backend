@@ -8,6 +8,7 @@
   },
   "scripts": {
     "seed-sample": "node scripts/seed-sample.js",
+    "seed-admins-messages": "node scripts/seed-admins-messages.js",
     "dump-db": "node scripts/dump-db.js",
     "dev": "nodemon --watch src --ext js,json --exec node src/index.js",
     "start": "node src/index.js",

@@ -1,8 +1,2 @@
 [api] running on :8080
-[mailer] about to send admin notification (only) { to: 'pcpps2507@gmail.com' }
-[0mPOST /api/v1/leads/public [32m201[0m 941.517 ms - 60[0m
-Mailer(Resend): message accepted {
-  to: 'pcpps2507@gmail.com',
-  subject: 'New lead received: OnlyAdmin Notify (xbUq3nqD8Rxp1uM9CL8t)',
-  status: 200
-}
+[0mPOST /api/v1/messages [32m201[0m 672.014 ms - 250[0m
