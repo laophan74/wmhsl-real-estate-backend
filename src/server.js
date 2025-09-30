@@ -23,12 +23,13 @@ export function createServer() {
   app.use(express.json({ limit: "1mb" }));
   app.use(morgan("dev"));
   app.set("trust proxy", 1);
+  const sameSite = process.env.SESSION_SAMESITE || (process.env.CROSS_SITE_COOKIES === 'true' ? 'none' : 'lax');
   app.use(
     cookieSession({
       name: "sid",
       secret: process.env.SESSION_SECRET || "dev-secret-change-me",
       httpOnly: true,
-      sameSite: "lax",
+      sameSite,
       secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     })

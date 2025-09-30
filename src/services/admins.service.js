@@ -1,14 +1,20 @@
 import { db } from "../config/firebase.js";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 const uuid = () => crypto.randomUUID();
 
 export async function createAdmin(payload) {
   const now = new Date();
+  let password_hash = undefined;
+  if (payload.password) {
+    password_hash = await bcrypt.hash(payload.password, 10);
+  }
   const doc = {
     admin_id: uuid(),
     username: payload.username,
-    password: payload.password, // NOTE: sample; store hash in real apps
+    // Do not store plain password; keep hashed version only
+    password_hash,
     first_name: payload.first_name,
     last_name: payload.last_name,
     email: payload.email,
@@ -23,7 +29,8 @@ export async function createAdmin(payload) {
   };
   const ref = db().collection('admins').doc(doc.admin_id);
   await ref.set(doc);
-  return { id: ref.id, ...doc };
+  const { password, password_hash: _ph, ...safe } = doc;
+  return { id: ref.id, ...safe };
 }
 
 export async function listAdmins({ limit = 20, offset = 0 }) {
@@ -54,16 +61,24 @@ export async function listAdmins({ limit = 20, offset = 0 }) {
 export async function getAdminById(id) {
   const doc = await db().collection('admins').doc(id).get();
   if (!doc.exists) return null;
-  return { id: doc.id, ...doc.data() };
+  const data = doc.data();
+  const { password, password_hash, ...safe } = data;
+  return { id: doc.id, ...safe };
 }
 
 export async function updateAdmin(id, patch) {
   const ref = db().collection('admins').doc(id);
   const now = new Date();
   const payload = { ...patch, 'metadata.updated_at': now };
+  if (patch.password) {
+    payload.password_hash = await bcrypt.hash(patch.password, 10);
+    delete payload.password;
+  }
   await ref.set(payload, { merge: true });
   const updated = await ref.get();
-  return { id: updated.id, ...updated.data() };
+  const data = updated.data();
+  const { password, password_hash, ...safe } = data;
+  return { id: updated.id, ...safe };
 }
 
 export async function softDeleteAdmin(id) {
@@ -71,5 +86,7 @@ export async function softDeleteAdmin(id) {
   const now = new Date();
   await ref.set({ metadata: { deleted_at: now, updated_at: now } }, { merge: true });
   const snap = await ref.get();
-  return { id: snap.id, ...snap.data() };
+  const data = snap.data();
+  const { password, password_hash, ...safe } = data;
+  return { id: snap.id, ...safe };
 }
