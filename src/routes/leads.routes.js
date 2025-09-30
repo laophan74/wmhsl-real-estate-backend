@@ -3,6 +3,7 @@ import { celebrate, Segments, Joi } from "celebrate";
 import * as LeadsCtrl from "../controllers/leads.controller.js";
 import { asyncHandler } from "../middleware/async-handler.js";
 import leadValidators from "../validators/lead.schema.js";
+import requireAuth from "../middleware/require-auth.js";
 
 const r = Router();
 
@@ -21,6 +22,7 @@ r.post(
  */
 r.get(
   "/",
+  requireAuth,
   celebrate({
     [Segments.QUERY]: Joi.object({
       status: Joi.string().valid("new","contacted","in progress","converted","lost"),
@@ -39,6 +41,7 @@ r.get(
  */
 r.get(
   "/:id",
+  requireAuth,
   celebrate({ [Segments.PARAMS]: Joi.object({ id: Joi.string().required() }) }),
   asyncHandler(LeadsCtrl.getLeadById)
 );
@@ -49,6 +52,7 @@ r.get(
  */
 r.patch(
   "/:id/status",
+  requireAuth,
   celebrate({
     [Segments.PARAMS]: Joi.object({ id: Joi.string().required() }),
     [Segments.BODY]: leadValidators.statusBody,
@@ -59,6 +63,7 @@ r.patch(
 // PATCH /api/v1/leads/:id (generic update: contact/status/metadata)
 r.patch(
   "/:id",
+  requireAuth,
   celebrate({
     [Segments.PARAMS]: Joi.object({ id: Joi.string().required() }),
     [Segments.BODY]: leadValidators.updateLeadBody,
@@ -72,6 +77,7 @@ r.patch(
  */
 r.delete(
   "/:id",
+  requireAuth,
   celebrate({ [Segments.PARAMS]: Joi.object({ id: Joi.string().required() }) }),
   asyncHandler(LeadsCtrl.softDeleteLead)
 );

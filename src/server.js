@@ -2,7 +2,9 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import cookieSession from "cookie-session";
 import v1Router from "./routes/index.js";
+import authRoutes from "./routes/auth.routes.js";
 import { notFoundHandler } from "./middleware/not-found.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
@@ -11,14 +13,32 @@ export function createServer() {
 
   // security & basics
   app.use(helmet());
-  app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+  const corsOrigin = process.env.CORS_ORIGIN || false; // e.g. https://your-frontend.com
+  app.use(
+    cors({
+      origin: corsOrigin || undefined,
+      credentials: true,
+    })
+  );
   app.use(express.json({ limit: "1mb" }));
   app.use(morgan("dev"));
+  app.set("trust proxy", 1);
+  app.use(
+    cookieSession({
+      name: "sid",
+      secret: process.env.SESSION_SECRET || "dev-secret-change-me",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
+  );
 
   // health
   app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
   // api v1
+  app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1", v1Router);
 
   // 404 & error
