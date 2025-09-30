@@ -18,10 +18,19 @@ export function createServer() {
     // Testing mode: allow all origins, no credentials needed
     app.use(cors({ origin: '*' }));
   } else {
-    const corsOrigin = process.env.CORS_ORIGIN; // e.g. https://your-frontend.com
+    const corsOriginEnv = process.env.CORS_ORIGIN; // comma-separated list supported
+    const allowed = (corsOriginEnv || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
     app.use(
       cors({
-        origin: corsOrigin, // must be set for credentialed requests
+        origin: (origin, cb) => {
+          // Allow non-browser or same-origin requests with no Origin header
+          if (!origin) return cb(null, true);
+          if (allowed.includes(origin)) return cb(null, true);
+          return cb(new Error('Not allowed by CORS'), false);
+        },
         credentials: true,
       })
     );
