@@ -27,10 +27,28 @@ export async function createAdmin(payload) {
 }
 
 export async function listAdmins({ limit = 20, offset = 0 }) {
-  let ref = db().collection('admins').where('metadata.deleted_at', '==', null).orderBy('metadata.created_at', 'desc').offset(offset).limit(limit);
-  const snap = await ref.get();
-  const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  return items;
+  try {
+    let ref = db().collection('admins')
+      .where('metadata.deleted_at', '==', null)
+      .orderBy('metadata.created_at', 'desc')
+      .offset(offset)
+      .limit(limit);
+    const snap = await ref.get();
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return items;
+  } catch (err) {
+    // Fallback when Firestore composite index is missing
+    // Strategy: fetch (limit+offset) docs by created_at desc, filter deleted_at === null in memory, then slice.
+    console.warn('[admins.list] missing index, using fallback without where filter:', err?.message || err);
+    const take = Math.max(0, Number(limit)) + Math.max(0, Number(offset));
+    let ref = db().collection('admins')
+      .orderBy('metadata.created_at', 'desc')
+      .limit(take || limit);
+    const snap = await ref.get();
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const filtered = all.filter(x => !x?.metadata?.deleted_at);
+    return filtered.slice(offset, offset + limit);
+  }
 }
 
 export async function getAdminById(id) {
