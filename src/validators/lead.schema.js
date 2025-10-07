@@ -1,7 +1,21 @@
 import Joi from "joi";
 
 // Allowed suburbs - extend as needed
-export const ALLOWED_SUBURBS = ["Asquith", "Hornsby", "Waitara"];
+export const ALLOWED_SUBURBS = [
+  "Hornsby",
+  "Asquith",
+  "Waitara",
+  "Hornsby Heights",
+  "Mount Colah",
+  "Mount Kuring-gai",
+  "Berowra",
+  "Berowra Heights",
+  "Wahroonga",
+  "Turramurra",
+  "Pennant Hills",
+  "Thornleigh",
+  "Normanhurst",
+];
 
 // Public form schema
 export const createPublicBody = Joi.object({
