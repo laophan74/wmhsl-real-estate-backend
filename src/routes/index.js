@@ -14,6 +14,11 @@ r.get("/", (_req, res) => {
 // Keep public form open under /leads/public; protect other operations
 r.use("/leads", leadsRouter);
 r.use("/admins", requireAuth, adminsRouter);
-r.use("/messages", requireAuth, messagesRouter);
+// /messages: allow public-first endpoint without auth, protect others
+const messagesGate = (req, res, next) => {
+  if (req.path === '/public-first') return next();
+  return requireAuth(req, res, next);
+};
+r.use("/messages", messagesGate, messagesRouter);
 
 export default r;
