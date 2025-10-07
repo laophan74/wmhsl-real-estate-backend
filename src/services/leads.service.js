@@ -20,10 +20,9 @@ export async function createLeadFromPublicForm(form, reqMeta) {
   // 1) scoring - allow computeScore to take buying/selling boolean if desired
   // Update computeScore signature if you plan to use `buying`/`selling` booleans there.
   const scoring = computeScore({
-    // provide both forms (booleans) — adjust computeScore implementation to consume appropriately
-    interested: sellingInterestBool,
+    interested: sellingInterestBool ? 'yes' : 'no',
+    buying: buyingInterestBool ? 'yes' : 'no',
     timeframe: form.timeframe,
-    buying: buyingInterestBool,
   });
   const score = scoring.total_score || 0;
 
@@ -53,6 +52,7 @@ export async function createLeadFromPublicForm(form, reqMeta) {
       selling_interest: sellingInterestBool,
       buying_interest: buyingInterestBool,
       score: Number.isFinite(score) ? score : 0,
+      category: scoring.category,
     },
     status: {
       current: "new",
@@ -72,9 +72,10 @@ export async function createLeadFromPublicForm(form, reqMeta) {
       version: 1,
       tags: [form.suburb].filter(Boolean),
       custom_fields: {
-        // Mirror custom fields for flexible reporting / UI
         selling_interest: sellingInterestBool,
         buying_interest: buyingInterestBool,
+        scoring_version: scoring.score_version,
+        scoring_factors: scoring.factors,
       },
     },
   };
