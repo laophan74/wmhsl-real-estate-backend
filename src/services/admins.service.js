@@ -16,9 +16,24 @@ export async function createAdmin(payload) {
   if (payload.password) {
     password_hash = await bcrypt.hash(payload.password, 10);
   }
+  // normalize username lowercase
+  const username = (payload.username || '').toLowerCase();
+  // uniqueness checks
+  if (username) {
+    const existingUserSnap = await db().collection('admins').where('username', '==', username).limit(1).get();
+    if (!existingUserSnap.empty) {
+      throw Object.assign(new Error('USERNAME_EXISTS'), { status: 409 });
+    }
+  }
+  if (payload.email) {
+    const existingEmailSnap = await db().collection('admins').where('email', '==', payload.email).limit(1).get();
+    if (!existingEmailSnap.empty) {
+      throw Object.assign(new Error('EMAIL_EXISTS'), { status: 409 });
+    }
+  }
   const doc = {
     admin_id: uuid(),
-    username: payload.username,
+    username,
     // Do not store plain password; keep hashed version only
     password_hash,
     first_name: payload.first_name,
@@ -76,6 +91,20 @@ export async function updateAdmin(id, patch) {
   const ref = db().collection('admins').doc(id);
   const now = new Date();
   const payload = { ...patch, 'metadata.updated_at': now };
+  if (patch.username) {
+    const uname = patch.username.toLowerCase();
+    const existingUserSnap = await db().collection('admins').where('username', '==', uname).limit(1).get();
+    if (!existingUserSnap.empty && existingUserSnap.docs[0].id !== id) {
+      throw Object.assign(new Error('USERNAME_EXISTS'), { status: 409 });
+    }
+    payload.username = uname;
+  }
+  if (patch.email) {
+    const existingEmailSnap = await db().collection('admins').where('email', '==', patch.email).limit(1).get();
+    if (!existingEmailSnap.empty && existingEmailSnap.docs[0].id !== id) {
+      throw Object.assign(new Error('EMAIL_EXISTS'), { status: 409 });
+    }
+  }
   if (patch.password) {
     payload.password_hash = await bcrypt.hash(patch.password, 10);
     delete payload.password;

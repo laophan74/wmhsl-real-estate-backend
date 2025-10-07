@@ -1,5 +1,5 @@
 import { loginBody, registerBody } from '../validators/auth.schema.js';
-import { verifyAdminCredentials, hashPassword, findAdminByEmail } from '../services/auth.service.js';
+import { verifyAdminCredentials, hashPassword, findAdminByUsername } from '../services/auth.service.js';
 import { db } from '../config/firebase.js';
 
 export const login = async (req, res, next) => {
@@ -8,8 +8,8 @@ export const login = async (req, res, next) => {
     if (!parsed.success) {
       return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
     }
-    const { email, password } = parsed.data;
-    const admin = await verifyAdminCredentials(email, password);
+  const { username, password } = parsed.data;
+  const admin = await verifyAdminCredentials(username, password);
     if (!admin) return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
     req.session.user = admin;
     return res.json({ user: admin });
@@ -36,20 +36,27 @@ export const register = async (req, res, next) => {
     }
     const parsed = registerBody.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
-    const { email, password, name, role } = parsed.data;
-    const exists = await findAdminByEmail(email);
-    if (exists) return res.status(409).json({ error: 'EMAIL_EXISTS' });
+    const { username, email, password, name, role } = parsed.data;
+    // enforce lowercase username canonical form
+    const uname = username.toLowerCase();
+    const exists = await findAdminByUsername(uname);
+    if (exists) return res.status(409).json({ error: 'USERNAME_EXISTS' });
     const password_hash = await hashPassword(password);
     const now = new Date().toISOString();
     const doc = {
-      email,
+      username: uname,
+      email: email || '',
       name: name || '',
       role: role || 'admin',
       password_hash,
       metadata: { created_at: now, updated_at: now, deleted_at: null },
     };
-    const ref = await db().collection('admins').add(doc);
-    return res.status(201).json({ id: ref.id, ...doc });
+    try {
+      const ref = await db().collection('admins').add(doc);
+      return res.status(201).json({ id: ref.id, ...doc });
+    } catch (e) {
+      return res.status(500).json({ error: 'CREATE_ADMIN_FAILED' });
+    }
   } catch (err) {
     next(err);
   }

@@ -3,24 +3,24 @@ import { db } from '../config/firebase.js';
 
 const ADMINS_COLLECTION = 'admins';
 
-export async function findAdminByEmail(email) {
-  const snap = await db().collection(ADMINS_COLLECTION).where('email', '==', email).limit(1).get();
+export async function findAdminByUsername(username) {
+  const snap = await db().collection(ADMINS_COLLECTION).where('username', '==', username).limit(1).get();
   if (snap.empty) return null;
   const doc = snap.docs[0];
   return { id: doc.id, ...doc.data() };
 }
 
-export async function verifyAdminCredentials(email, password) {
-  const admin = await findAdminByEmail(email);
+export async function verifyAdminCredentials(username, password) {
+  const admin = await findAdminByUsername(username.toLowerCase());
   if (!admin || admin?.metadata?.deleted_at) return null;
   const { password_hash } = admin;
   if (!password_hash) return null;
   const ok = await bcrypt.compare(password, password_hash);
   if (!ok) return null;
-  // keep only safe fields in session
   const safe = {
     id: admin.id,
-    email: admin.email,
+    username: admin.username,
+    email: admin.email || '',
     name: admin.name || '',
     role: admin.role || 'admin',
   };

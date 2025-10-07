@@ -1,7 +1,8 @@
 import { Joi } from 'celebrate';
 
 const name = Joi.string().min(2).max(50);
-const username = Joi.string().min(2).max(50);
+// Username accepted as provided; service layer normalizes to lowercase
+const username = Joi.string().min(2).max(50).regex(/^[A-Za-z0-9._-]+$/, 'alphanumeric plus . _ -');
 const password = Joi.string().min(2).max(50);
 const email = Joi.string().email();
 
