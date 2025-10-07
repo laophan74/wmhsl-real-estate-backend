@@ -214,11 +214,48 @@ export async function updateLead(id, patch) {
 
     // Build updates
     const updates = { "metadata.updated_at": now };
+    let newContact = data.contact || {};
+    let scoringRecalc = false;
     if (patch.contact) {
-      updates["contact"] = { ...(data.contact || {}), ...patch.contact };
+      newContact = { ...newContact, ...patch.contact };
+      // Detect if scoring inputs changed
+      if (['timeframe','selling_interest','buying_interest'].some(k => Object.prototype.hasOwnProperty.call(patch.contact, k))) {
+        scoringRecalc = true;
+      }
     }
-    if (patch.metadata) {
-      updates["metadata"] = { ...(data.metadata || {}), ...patch.metadata, updated_at: now };
+    // Recalculate score & category if needed
+    if (scoringRecalc) {
+      try {
+        const scoring = computeScore({
+          interested: newContact.selling_interest ? 'yes' : 'no',
+          buying: newContact.buying_interest ? 'yes' : 'no',
+          timeframe: newContact.timeframe,
+        });
+        newContact.score = scoring.total_score;
+        newContact.category = scoring.category;
+        // Inject scoring metadata into metadata.custom_fields
+        const existingMeta = data.metadata || {};
+        const existingCF = existingMeta.custom_fields || {};
+        updates['metadata'] = {
+          ...existingMeta,
+          ...(patch.metadata || {}),
+          updated_at: now,
+          custom_fields: {
+            ...existingCF,
+            ...(patch.metadata?.custom_fields || {}),
+            scoring_version: scoring.score_version,
+            scoring_factors: scoring.factors,
+          },
+        };
+      } catch (err) {
+        console.warn('[leads.update] scoring recalculation failed:', err?.message || err);
+      }
+    }
+    if (patch.metadata && !scoringRecalc) {
+      updates['metadata'] = { ...(data.metadata || {}), ...patch.metadata, updated_at: now };
+    }
+    if (patch.contact || scoringRecalc) {
+      updates['contact'] = newContact;
     }
     if (patch.status) {
       const history = Array.isArray(data.status?.history) ? data.status.history : [];
