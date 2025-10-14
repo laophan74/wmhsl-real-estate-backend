@@ -258,6 +258,8 @@ export async function updateLead(id, patch) {
       updates['contact'] = newContact;
     }
     if (patch.status) {
+      console.log('[DEBUG] Updating status:', patch.status);
+      console.log('[DEBUG] Current data.status:', data.status);
       const history = Array.isArray(data.status?.history) ? data.status.history : [];
       if (patch.status.current && patch.status.current !== data.status?.current) {
         history.push({
@@ -267,8 +269,11 @@ export async function updateLead(id, patch) {
           notes: patch.status.notes || "",
         });
       }
-      updates["status.current"] = patch.status.current || data.status?.current || "new";
-      updates["status.history"] = history;
+      updates["status"] = {
+        current: patch.status.current || data.status?.current || "new",
+        history: history
+      };
+      console.log('[DEBUG] Status updates:', updates["status"]);
     }
     tx.set(ref, updates, { merge: true });
   });
