@@ -13,6 +13,7 @@ export function createServer() {
   // security & basics
   app.use(helmet());
   const authDisabled = process.env.AUTH_DISABLED === 'true';
+    console.log('CORS_ORIGIN env:', process.env.CORS_ORIGIN);
   if (authDisabled) {
     // Testing mode: allow all origins
     app.use(cors({ origin: '*' }));
