@@ -25,7 +25,7 @@ r.get(
   requireAuth,
   celebrate({
     [Segments.QUERY]: Joi.object({
-      status: Joi.string().valid("new","contacted","in progress","converted","lost"),
+      status: Joi.string(),
       suburb: Joi.string(),
       category: Joi.string().valid("HOT","WARM","COLD"),
       limit: Joi.number().integer().min(1).max(100).default(20),

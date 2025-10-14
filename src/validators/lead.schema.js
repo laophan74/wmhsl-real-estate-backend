@@ -41,7 +41,7 @@ export const createPublicBody = Joi.object({
 }).options({ stripUnknown: false });
 
 export const statusBody = Joi.object({
-  status: Joi.string().valid("new", "contacted", "in progress", "converted", "lost").required(),
+  status: Joi.string().required(),
   notes: Joi.string().allow("", null),
   changed_by: Joi.string().required(),
 });
@@ -61,7 +61,7 @@ const contactShape = Joi.object({
 }).unknown(false);
 
 const statusUpdateShape = Joi.object({
-  current: Joi.string().valid("new", "contacted", "in progress", "converted", "lost"),
+  current: Joi.string(),
   notes: Joi.string().allow("", null),
   changed_by: Joi.string(),
 }).unknown(false);
