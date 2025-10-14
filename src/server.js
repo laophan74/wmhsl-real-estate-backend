@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import cookieSession from "cookie-session";
 import v1Router from "./routes/index.js";
 import authRoutes from "./routes/auth.routes.js";
 import { notFoundHandler } from "./middleware/not-found.js";
@@ -15,7 +14,7 @@ export function createServer() {
   app.use(helmet());
   const authDisabled = process.env.AUTH_DISABLED === 'true';
   if (authDisabled) {
-    // Testing mode: allow all origins, no credentials needed
+    // Testing mode: allow all origins
     app.use(cors({ origin: '*' }));
   } else {
     const corsOriginEnv = process.env.CORS_ORIGIN; // comma-separated list supported
@@ -31,7 +30,7 @@ export function createServer() {
           if (allowed.includes(origin)) return cb(null, true);
           return cb(new Error('Not allowed by CORS'), false);
         },
-        credentials: true,
+        // No need for credentials with JWT tokens
       })
     );
   }

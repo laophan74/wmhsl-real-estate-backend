@@ -1,5 +1,6 @@
 import { loginBody, registerBody } from '../validators/auth.schema.js';
 import { verifyAdminCredentials, hashPassword, findAdminByUsername } from '../services/auth.service.js';
+import { generateToken, verifyToken, extractTokenFromHeader } from '../utils/jwt.js';
 import { db } from '../config/firebase.js';
 
 export const login = async (req, res, next) => {
@@ -11,21 +12,33 @@ export const login = async (req, res, next) => {
   const { username, password } = parsed.data;
   const admin = await verifyAdminCredentials(username, password);
     if (!admin) return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
-    req.session.user = admin;
-    return res.json({ user: admin });
+    
+    // Generate JWT token instead of using session
+    const token = generateToken(admin);
+    
+    return res.json({ 
+      user: admin,
+      token: token,
+      tokenType: 'Bearer'
+    });
   } catch (err) {
     next(err);
   }
 };
 
 export const logout = async (req, res) => {
-  req.session = null;
-  return res.json({ ok: true });
+  // With JWT, logout is handled client-side by removing the token
+  // Server-side logout would require token blacklisting (not implemented)
+  return res.json({ 
+    ok: true, 
+    message: 'Logout successful. Please remove token from client storage.' 
+  });
 };
 
 export const me = async (req, res) => {
-  if (!req.session?.user) return res.status(401).json({ error: 'UNAUTHENTICATED' });
-  return res.json({ user: req.session.user });
+  // User info is now available from the JWT token (attached by requireAuth middleware)
+  if (!req.user) return res.status(401).json({ error: 'UNAUTHENTICATED' });
+  return res.json({ user: req.user });
 };
 
 // Optional: register a new admin locally (guarded behind env)
