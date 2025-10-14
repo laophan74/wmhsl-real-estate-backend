@@ -14,3 +14,13 @@ export const registerBody = z.object({
   name: z.string().min(1).max(100).optional(),
   role: z.enum(['admin', 'owner']).optional(),
 });
+
+// Change password validator
+export const changePasswordBody = z.object({
+  currentPassword: z.string().min(6).max(100),
+  newPassword: z.string().min(6).max(100),
+  confirmNewPassword: z.string().min(6).max(100),
+}).refine((data) => data.newPassword === data.confirmNewPassword, {
+  message: "New passwords don't match",
+  path: ["confirmNewPassword"],
+});

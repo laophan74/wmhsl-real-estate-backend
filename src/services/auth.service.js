@@ -31,3 +31,18 @@ export async function hashPassword(plain) {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(plain, salt);
 }
+
+export async function findAdminById(adminId) {
+  const doc = await db().collection(ADMINS_COLLECTION).doc(adminId).get();
+  if (!doc.exists) return null;
+  return { id: doc.id, ...doc.data() };
+}
+
+export async function updateAdminPassword(adminId, newPasswordHash) {
+  const now = new Date().toISOString();
+  await db().collection(ADMINS_COLLECTION).doc(adminId).update({
+    password_hash: newPasswordHash,
+    'metadata.updated_at': now,
+  });
+  return true;
+}

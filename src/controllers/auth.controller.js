@@ -1,5 +1,5 @@
-import { loginBody, registerBody } from '../validators/auth.schema.js';
-import { verifyAdminCredentials, hashPassword, findAdminByUsername } from '../services/auth.service.js';
+import { loginBody, registerBody, changePasswordBody } from '../validators/auth.schema.js';
+import { verifyAdminCredentials, hashPassword, findAdminByUsername, findAdminById, updateAdminPassword } from '../services/auth.service.js';
 import { generateToken, verifyToken, extractTokenFromHeader } from '../utils/jwt.js';
 import { db } from '../config/firebase.js';
 
@@ -70,6 +70,52 @@ export const register = async (req, res, next) => {
     } catch (e) {
       return res.status(500).json({ error: 'CREATE_ADMIN_FAILED' });
     }
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Change password for authenticated admin
+export const changePassword = async (req, res, next) => {
+  try {
+    // Ensure admin is authenticated
+    if (!req.user) return res.status(401).json({ error: 'UNAUTHENTICATED' });
+    
+    const parsed = changePasswordBody.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+    }
+    
+    const { currentPassword, newPassword } = parsed.data;
+    const adminId = req.user.id;
+    
+    // Get current admin data from database
+    const admin = await findAdminById(adminId);
+    if (!admin || admin?.metadata?.deleted_at) {
+      return res.status(404).json({ error: 'ADMIN_NOT_FOUND' });
+    }
+    
+    // Verify current password
+    const bcrypt = await import('bcryptjs');
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.password_hash);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ error: 'INVALID_CURRENT_PASSWORD' });
+    }
+    
+    // Check if new password is different from current
+    const isSamePassword = await bcrypt.compare(newPassword, admin.password_hash);
+    if (isSamePassword) {
+      return res.status(400).json({ error: 'NEW_PASSWORD_SAME_AS_CURRENT' });
+    }
+    
+    // Hash new password and update
+    const newPasswordHash = await hashPassword(newPassword);
+    await updateAdminPassword(adminId, newPasswordHash);
+    
+    return res.json({ 
+      ok: true, 
+      message: 'Password changed successfully' 
+    });
   } catch (err) {
     next(err);
   }
