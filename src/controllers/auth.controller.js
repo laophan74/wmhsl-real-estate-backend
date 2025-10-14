@@ -11,10 +11,8 @@ export const login = async (req, res, next) => {
       return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
     }
   const { username, password } = parsed.data;
-  const admin = await verifyAdminCredentials(username, password);
-    if (!admin) return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
-    
-    // Generate JWT token instead of using session
+    const admin = await verifyAdminCredentials(username, password);
+    if (!admin) return res.status(401).json({ error: 'INVALID_CREDENTIALS', message: 'Invalid username or password' });    // Generate JWT token instead of using session
     const token = generateToken(admin);
     
     return res.json({ 
@@ -54,7 +52,7 @@ export const register = async (req, res, next) => {
     // enforce lowercase username canonical form
     const uname = username.toLowerCase();
     const exists = await findAdminByUsername(uname);
-    if (exists) return res.status(409).json({ error: 'USERNAME_EXISTS' });
+    if (exists) return res.status(409).json({ error: 'USERNAME_EXISTS', message: 'This username is already used' });
     const password_hash = await hashPassword(password);
     const now = new Date().toISOString();
     const doc = {
@@ -80,7 +78,7 @@ export const register = async (req, res, next) => {
 export const changePassword = async (req, res, next) => {
   try {
     // Ensure admin is authenticated
-    if (!req.user) return res.status(401).json({ error: 'UNAUTHENTICATED' });
+    if (!req.user) return res.status(401).json({ error: 'UNAUTHENTICATED', message: 'Authentication required' });
     
     const parsed = changePasswordBody.safeParse(req.body);
     if (!parsed.success) {
@@ -93,19 +91,19 @@ export const changePassword = async (req, res, next) => {
     // Get current admin data from database
     const admin = await findAdminById(adminId);
     if (!admin || admin?.metadata?.deleted_at) {
-      return res.status(404).json({ error: 'ADMIN_NOT_FOUND' });
+      return res.status(404).json({ error: 'ADMIN_NOT_FOUND', message: 'Admin account not found' });
     }
     
     // Verify current password
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.password_hash);
     if (!isCurrentPasswordValid) {
-      return res.status(400).json({ error: 'INVALID_CURRENT_PASSWORD' });
+      return res.status(400).json({ error: 'INVALID_CURRENT_PASSWORD', message: 'Current password is incorrect' });
     }
     
     // Check if new password is different from current
     const isSamePassword = await bcrypt.compare(newPassword, admin.password_hash);
     if (isSamePassword) {
-      return res.status(400).json({ error: 'NEW_PASSWORD_SAME_AS_CURRENT' });
+      return res.status(400).json({ error: 'NEW_PASSWORD_SAME_AS_CURRENT', message: 'New password must be different from current password' });
     }
     
     // Hash new password and update
