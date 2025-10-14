@@ -2,6 +2,7 @@ import { loginBody, registerBody, changePasswordBody } from '../validators/auth.
 import { verifyAdminCredentials, hashPassword, findAdminByUsername, findAdminById, updateAdminPassword } from '../services/auth.service.js';
 import { generateToken, verifyToken, extractTokenFromHeader } from '../utils/jwt.js';
 import { db } from '../config/firebase.js';
+import bcrypt from 'bcryptjs';
 
 export const login = async (req, res, next) => {
   try {
@@ -96,7 +97,6 @@ export const changePassword = async (req, res, next) => {
     }
     
     // Verify current password
-    const bcrypt = await import('bcryptjs');
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.password_hash);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({ error: 'INVALID_CURRENT_PASSWORD' });
