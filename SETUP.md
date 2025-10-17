@@ -1,4 +1,4 @@
-# WMHSL Real Estate Backend - Setup Guide
+# Stone Real Estate Backend - Setup Guide
 
 ## 📋 Prerequisites
 
